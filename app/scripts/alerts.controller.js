@@ -108,6 +108,46 @@
             }
         };
 
+        var getActiveEvent = function() {
+            return vm.events[vm.activeRowIndex];
+        };
+
+        var archiveEvent = function(event) {
+
+            event.archiving = true;
+
+            if (event.count) {
+
+                var filters = _.cloneDeep(vm.filters);
+
+                for (var key in event.keys) {
+                    var filter = {term: {}};
+                    filter.term[key] = event.keys[key];
+                    filters.push(filter);
+                }
+
+                EventRepository.archiveByQuery({
+                    query: $routeParams.q,
+                    filters: filters,
+                    lteTimestamp: event.timestamp
+                }).then(function(result) {
+                    removeEvent(event);
+                });
+
+            }
+            else {
+                EventRepository.archiveEvent(event).then(
+                    function(result) {
+                        removeEvent(event);
+                    }
+                );
+            }
+        };
+
+        vm.archiveActiveEvent = function() {
+            archiveEvent(getActiveEvent());
+        };
+
         vm.openGroup = function(event) {
             var query = Util.printf(
                 '{} +alert.signature.raw:"{}"',
@@ -372,6 +412,11 @@
             Mousetrap.bind($scope, "o", function() {
                 vm.open(getActiveEvent());
             }, "Open Event");
+
+            Mousetrap.bind($scope, "f8", function(e) {
+                e.preventDefault();
+                vm.archiveActiveEvent();
+            }, "Archive Active Event");
 
             vm.filters = [{term: {event_type: "alert"}}];
 
